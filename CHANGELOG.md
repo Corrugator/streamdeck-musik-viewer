@@ -3,6 +3,15 @@
 Versionsschema: `{major}.{minor}.{patch}.{build}` (Stream Deck Manifest).
 Jeder Eintrag = ein gepacktes `.streamDeckPlugin`-Bundle.
 
+## 1.0.0.9 — 2026-06-06 — Polished idle state
+
+- **New idle background:** when Apple Music is stopped or not running, the encoder display now shows a subtle ghost-logo (Hexagon + EQ-Bars) on a dark gradient instead of an empty screen.
+- **Friendlier idle text:**
+  - App closed → `Apple Music` / `Open the app`
+  - Open but stopped → `Nothing playing`
+- Progress/volume row is cleared while idle so the brand background can breathe.
+- Idle cover is bundled in the plugin and loaded once into memory — no disk I/O on every poll.
+
 ## 1.0.0.8 — 2026-05-30 — Track progress display
 
 - **Encoder bottom area now defaults to track progress** instead of permanent volume display. Shows current time + total like `1:33 / 3:15`, with the bar wandering as the track plays.

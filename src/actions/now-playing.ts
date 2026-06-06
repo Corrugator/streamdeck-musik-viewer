@@ -10,6 +10,8 @@ import streamDeck, {
 	type FeedbackPayload,
 } from "@elgato/streamdeck";
 import { readFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
 	getSystemAudio,
@@ -211,14 +213,19 @@ export class NowPlaying extends SingletonAction {
 
 	async #renderDial(action: DialAction, track: TrackInfo, audio: SystemAudioResult): Promise<void> {
 		const pidChanged = track.pid !== this.#snapshot.pid;
+		const stateChanged = track.state !== this.#snapshot.state;
 		const playing = track.state === "playing" || track.state === "paused";
 
 		const trackFull = playing
 			? (track.name ?? "")
 			: track.state === "not_running"
 				? "Apple Music"
-				: "Stopped";
-		const artistFull = playing ? (track.artist ?? "") : "";
+				: "Nothing playing";
+		const artistFull = playing
+			? (track.artist ?? "")
+			: track.state === "not_running"
+				? "Open the app"
+				: "";
 
 		// Sync marquee state when the displayed text changes.
 		if (trackFull !== this.#marqueeTrack || artistFull !== this.#marqueeArtist) {
@@ -231,12 +238,19 @@ export class NowPlaying extends SingletonAction {
 		}
 
 		// value + indicator show track progress by default; switch to volume right after a dial interaction.
-		const valueText = this.#displayMode === "volume"
-			? (audio.muted ? "Muted" : `${audio.volume}%`)
-			: formatProgress(track.position, track.duration);
-		const indicatorValue = this.#displayMode === "volume"
-			? (audio.muted ? 0 : audio.volume)
-			: progressPercent(track.position, track.duration);
+		// In idle (stopped / not_running) the bottom row is cleared so the ghost-logo background can shine.
+		let valueText: string;
+		let indicatorValue: number;
+		if (this.#displayMode === "volume") {
+			valueText = audio.muted ? "Muted" : `${audio.volume}%`;
+			indicatorValue = audio.muted ? 0 : audio.volume;
+		} else if (playing) {
+			valueText = formatProgress(track.position, track.duration);
+			indicatorValue = progressPercent(track.position, track.duration);
+		} else {
+			valueText = "";
+			indicatorValue = 0;
+		}
 
 		// Custom layout keys: track, artist, icon, value, indicator.
 		const feedback: FeedbackPayload = {
@@ -246,10 +260,15 @@ export class NowPlaying extends SingletonAction {
 			indicator: { value: indicatorValue },
 		} as FeedbackPayload;
 
-		// Cover read is expensive — only on track change.
-		if (pidChanged && playing) {
-			const cover = await loadArtworkDataUrl(track.artworkPath);
-			if (cover) feedback.icon = cover;
+		// Cover / idle background — only swap on track or state change to avoid base64 spam.
+		if (pidChanged || stateChanged) {
+			if (playing) {
+				const cover = await loadArtworkDataUrl(track.artworkPath);
+				if (cover) feedback.icon = cover;
+			} else {
+				const idleCover = await loadIdleCover();
+				if (idleCover) feedback.icon = idleCover;
+			}
 		}
 
 		await action.setFeedback(feedback);
@@ -328,6 +347,30 @@ function marqueeSlice(text: string, max: number, offset: number): string {
 	const padded = text + MARQUEE_SEPARATOR;
 	const start = offset % padded.length;
 	return (padded + padded).slice(start, start + max);
+}
+
+/**
+ * Idle background — Hexagon + EQ-bar ghost on dark gradient. Loaded once from
+ * the plugin bundle and cached for the rest of the process lifetime.
+ */
+const IDLE_COVER_PATH = resolve(
+	dirname(fileURLToPath(import.meta.url)),
+	"..",
+	"imgs",
+	"encoder-idle.png",
+);
+let cachedIdleCover: string | null | undefined;
+
+async function loadIdleCover(): Promise<string | null> {
+	if (cachedIdleCover !== undefined) return cachedIdleCover;
+	try {
+		const buf = await readFile(IDLE_COVER_PATH);
+		cachedIdleCover = `data:image/png;base64,${buf.toString("base64")}`;
+	} catch (e) {
+		streamDeck.logger.warn(`loadIdleCover failed: ${e}`);
+		cachedIdleCover = null;
+	}
+	return cachedIdleCover;
 }
 
 async function loadArtworkDataUrl(path?: string): Promise<string | null> {

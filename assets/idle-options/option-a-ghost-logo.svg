@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+  <defs>
+    <linearGradient id="bgA" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1A1D24"/>
+      <stop offset="100%" stop-color="#0A0C0F"/>
+    </linearGradient>
+    <linearGradient id="metalRedA" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF4D52"/>
+      <stop offset="100%" stop-color="#7A0816"/>
+    </linearGradient>
+    <linearGradient id="dimA" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#000000" stop-opacity="0.7"/>
+      <stop offset="40%" stop-color="#000000" stop-opacity="0.15"/>
+      <stop offset="60%" stop-color="#000000" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.7"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="200" fill="url(#bgA)"/>
+  <!-- Ghost Hexagon + EQ Bars centered, low opacity -->
+  <g opacity="0.20" transform="translate(120, 5) scale(0.37)">
+    <polygon points="256,90 410,178 410,334 256,422 102,334 102,178"
+             fill="none" stroke="url(#metalRedA)" stroke-width="22" stroke-linejoin="round"/>
+    <g fill="url(#metalRedA)">
+      <rect x="170" y="240" width="28" height="80"  rx="8"/>
+      <rect x="212" y="180" width="28" height="140" rx="8"/>
+      <rect x="254" y="210" width="28" height="110" rx="8"/>
+      <rect x="296" y="170" width="28" height="150" rx="8"/>
+      <rect x="338" y="225" width="28" height="95"  rx="8"/>
+    </g>
+  </g>
+  <!-- Dim overlay (same as live cover layout) -->
+  <rect width="400" height="200" fill="url(#dimA)"/>
+  <!-- Text overlays (simulating actual layout) -->
+  <text x="200" y="55" text-anchor="middle"
+        font-family="-apple-system, sans-serif" font-size="34" font-weight="700" fill="#FFFFFF">Nothing playing</text>
+  <text x="200" y="92" text-anchor="middle"
+        font-family="-apple-system, sans-serif" font-size="26" font-weight="500" fill="#E5E5E5">Open Apple Music</text>
+  <!-- Empty volume bar at bottom -->
+  <rect x="12" y="186" width="376" height="10" rx="4" fill="#FFFFFF" opacity="0.15"/>
+</svg>
