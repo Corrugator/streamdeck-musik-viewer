@@ -5,3 +5,4 @@ com.corrugator.streamdeck-musik-viewer.sdPlugin/logs/
 .DS_Store
 *.log
 .submission-texts.md
+deployment/

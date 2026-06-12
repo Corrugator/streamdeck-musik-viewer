@@ -87,6 +87,12 @@ export class NowPlaying extends SingletonAction {
 	}
 
 	override onWillDisappear(_ev: WillDisappearEvent): void {
+		// The action can sit on multiple dials (profiles, pages). Only tear the
+		// shared timers down when the LAST visible instance disappears — the
+		// disappearing one may still be counted in this.actions at this point.
+		const visibleDials = [...this.actions].filter((a) => a.isDial()).length;
+		if (visibleDials > 1) return;
+
 		if (this.#timer) clearInterval(this.#timer);
 		if (this.#flushTimer) clearTimeout(this.#flushTimer);
 		if (this.#modeRevertTimer) clearTimeout(this.#modeRevertTimer);
@@ -94,6 +100,9 @@ export class NowPlaying extends SingletonAction {
 		this.#timer = undefined;
 		this.#flushTimer = undefined;
 		this.#modeRevertTimer = undefined;
+		// Without this, a re-appearing encoder would be stuck in volume mode
+		// forever — the revert timer that would have switched back is gone.
+		this.#displayMode = "progress";
 	}
 
 	override async onTouchTap(ev: TouchTapEvent): Promise<void> {
@@ -318,8 +327,10 @@ function truncate(s: string | undefined, max: number): string {
 
 function formatTime(seconds: number): string {
 	const s = Math.max(0, Math.floor(seconds));
-	const m = Math.floor(s / 60);
+	const h = Math.floor(s / 3600);
+	const m = Math.floor((s % 3600) / 60);
 	const r = s % 60;
+	if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 	return `${m}:${String(r).padStart(2, "0")}`;
 }
 

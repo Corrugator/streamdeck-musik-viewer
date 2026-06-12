@@ -3,6 +3,14 @@
 Versionsschema: `{major}.{minor}.{patch}.{build}` (Stream Deck Manifest).
 Jeder Eintrag = ein gepacktes `.streamDeckPlugin`-Bundle.
 
+## 1.0.0.10 — 2026-06-12 — Bug-fix round (Q&A audit)
+
+Findings from a comprehensive bug audit, all fixed:
+
+- **Display stuck in volume mode:** if the action disappeared (profile switch, page change) during the 2.5 s volume display, the revert timer was cancelled but the mode stayed "volume" — a re-appearing encoder showed volume forever instead of track progress.
+- **Second encoder froze:** with the action on 2+ dials, removing one unconditionally stopped the shared poll timer, freezing the remaining encoder. Timers now only stop when the last visible instance disappears.
+- **Defensive parsing:** comma normalisation now replaces all commas (garbage input is rejected cleanly), `formatTime` supports tracks over 60 minutes (`1:30:30` instead of `90:30`).
+
 ## 1.0.0.9 — 2026-06-06 — Polished idle state
 
 - **New idle background:** when Apple Music is stopped or not running, the encoder display now shows a subtle ghost-logo (Hexagon + EQ-Bars) on a dark gradient instead of an empty screen.
