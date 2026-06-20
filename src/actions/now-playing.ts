@@ -2,6 +2,7 @@ import streamDeck, {
 	action,
 	DialDownEvent,
 	DialRotateEvent,
+	DidReceiveSettingsEvent,
 	SingletonAction,
 	TouchTapEvent,
 	WillAppearEvent,
@@ -55,8 +56,20 @@ type Snapshot = {
 
 type SystemAudioResult = { volume: number; muted: boolean };
 
+/** What pressing the dial does — user-configurable in the Property Inspector. */
+type DialPressAction = "mute" | "playpause";
+
+type NowPlayingSettings = {
+	dialPress?: DialPressAction;
+};
+
+/** Defaults to "mute" — preserves the original behaviour for existing users. */
+function dialPressAction(settings: NowPlayingSettings): DialPressAction {
+	return settings.dialPress === "playpause" ? "playpause" : "mute";
+}
+
 @action({ UUID: "com.corrugator.streamdeck-musik-viewer.now-playing" })
-export class NowPlaying extends SingletonAction {
+export class NowPlaying extends SingletonAction<NowPlayingSettings> {
 	#timer?: NodeJS.Timeout;
 	#snapshot: Snapshot = {};
 
@@ -79,11 +92,24 @@ export class NowPlaying extends SingletonAction {
 	#displayMode: "progress" | "volume" = "progress";
 	#modeRevertTimer?: NodeJS.Timeout;
 
-	override async onWillAppear(_ev: WillAppearEvent): Promise<void> {
+	override async onWillAppear(ev: WillAppearEvent<NowPlayingSettings>): Promise<void> {
 		streamDeck.logger.info("onWillAppear (encoder)");
 		this.#snapshot = {};
+		if (ev.action.isDial()) await this.#applyTriggerDescription(ev.action, ev.payload.settings);
 		await this.#tick();
 		this.#timer ??= setInterval(() => void this.#tick(), POLL_MS);
+	}
+
+	override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<NowPlayingSettings>): Promise<void> {
+		// User changed the press action in the Property Inspector — reflect it in
+		// the on-screen trigger hint right away.
+		if (ev.action.isDial()) await this.#applyTriggerDescription(ev.action, ev.payload.settings);
+	}
+
+	/** Update the dial's on-screen interaction hints to match the chosen press action. */
+	async #applyTriggerDescription(action: DialAction, settings: NowPlayingSettings): Promise<void> {
+		const push = dialPressAction(settings) === "playpause" ? "Play / Pause" : "Mute";
+		await action.setTriggerDescription({ push, rotate: "Volume", touch: "Play / Pause" });
 	}
 
 	override onWillDisappear(_ev: WillDisappearEvent): void {
@@ -115,7 +141,26 @@ export class NowPlaying extends SingletonAction {
 		}
 	}
 
-	override async onDialDown(ev: DialDownEvent): Promise<void> {
+	override async onDialDown(ev: DialDownEvent<NowPlayingSettings>): Promise<void> {
+		if (dialPressAction(ev.payload.settings) === "playpause") {
+			await this.#dialPlayPause(ev);
+			return;
+		}
+		await this.#dialToggleMute(ev);
+	}
+
+	async #dialPlayPause(ev: DialDownEvent<NowPlayingSettings>): Promise<void> {
+		this.#lastUserActionAt = Date.now();
+		try {
+			await playPause();
+			await this.#tick();
+		} catch (e) {
+			streamDeck.logger.warn(`playPause (dial) failed: ${e}`);
+			await ev.action.showAlert();
+		}
+	}
+
+	async #dialToggleMute(ev: DialDownEvent<NowPlayingSettings>): Promise<void> {
 		this.#lastUserActionAt = Date.now();
 		this.#enterVolumeMode();
 		const next = !(this.#cachedMuted ?? false);

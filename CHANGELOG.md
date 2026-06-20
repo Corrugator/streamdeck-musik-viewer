@@ -3,6 +3,12 @@
 Versionsschema: `{major}.{minor}.{patch}.{build}` (Stream Deck Manifest).
 Jeder Eintrag = ein gepacktes `.streamDeckPlugin`-Bundle.
 
+## 1.0.0.11 — 2026-06-20 — Configurable dial press
+
+- **Choose what pressing the dial does:** a new **Dial press** option in the Property Inspector switches the encoder push between **Mute** (default) and **Play / Pause**.
+- The on-screen push hint updates live to match the selected action.
+- Existing setups keep the previous behaviour (Mute) — the default is unchanged.
+
 ## 1.0.0.10 — 2026-06-12 — Bug-fix round (Q&A audit)
 
 Findings from a comprehensive bug audit, all fixed:
